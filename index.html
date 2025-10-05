@@ -1312,6 +1312,9 @@
     api_configs: []
   };
 
+  // *** إضافة: متغير لمنع تكرار محاولة حذف الاشتراك المنتهي ***
+  let hasAttemptedExpiredSubCleanup = false;
+
   // Temporary storage for multi-step modals
   let tempAttendanceData = {};
 
@@ -1497,7 +1500,10 @@
       today.setHours(23, 59, 59, 999); // Set to end of today to include the whole day
       if (today > endDate) {
           // *** إضافة: عند اكتشاف انتهاء الاشتراك، قم بتشغيل دالة الحذف ***
-          handleExpiredSubscription(sub.usedKey);
+          if (!hasAttemptedExpiredSubCleanup) {
+              handleExpiredSubscription();
+              hasAttemptedExpiredSubCleanup = true; // منع المحاولة مرة أخرى في نفس الجلسة
+          }
           return false;
       }
 
@@ -1509,27 +1515,24 @@
    * *** تعديل: ستقوم الدالة الآن بحذف بيانات الاشتراك من حساب المستخدم أيضاً ***
    * @param {string} keyToDelete The subscription key to delete from Firestore.
    */
-  async function handleExpiredSubscription(keyToDelete) {
+  async function handleExpiredSubscription() {
       const user = auth.currentUser;
       if (!user) return;
 
       try {
-          const batch = firestore.batch();
+           // *** تعديل: إزالة محاولة حذف رمز التفعيل من subscriptionKeys ***
+           // المستخدم لا يملك صلاحية الحذف من هذه المجموعة، وهذا هو سبب الخطأ.
+           // سنقوم فقط بحذف بيانات الاشتراك من مستند المستخدم نفسه.
           const userRef = firestore.collection('users').doc(user.uid);
-
-          // 1. حذف بيانات الاشتراك من مستند المستخدم
-          batch.update(userRef, { subscription: firebase.firestore.FieldValue.delete() });
-          console.log(`Subscription data removed for user: ${user.uid}`);
-
-          // 2. حذف رمز التفعيل نفسه إذا كان موجوداً
-          if (keyToDelete) {
-              const keyRef = firestore.collection('subscriptionKeys').doc(keyToDelete);
-              batch.delete(keyRef);
-              console.log(`Successfully deleted expired key: ${keyToDelete}`);
-          }
-          await batch.commit();
+ 
+           // حذف حقل الاشتراك من مستند المستخدم
+           await userRef.update({
+               subscription: firebase.firestore.FieldValue.delete()
+           });
+           console.log(`Expired subscription data removed for user: ${user.uid}`);
+           showToast('تم تحديث حالة اشتراكك.');
       } catch (error) {
-          console.error("Error deleting expired subscription key:", error);
+           console.error("Error cleaning up expired subscription:", error);
       }
   }
 
@@ -7248,7 +7251,7 @@
                   
                   // إعادة رسم الواجهة الحالية لإظهار/إخفاء الميزات المدفوعة
                   await renderView(state.currentView.name, state.currentView.params);
-                  showToast('تم تحديث حالة اشتراكك.');
+                  if (!hasAttemptedExpiredSubCleanup) showToast('تم تحديث حالة اشتراكك.');
               }
           }
       }, (error) => {
