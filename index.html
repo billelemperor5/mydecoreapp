@@ -1488,14 +1488,49 @@
       if (!sub || !sub.isActive) return false; // يجب أن يكون لديه اشتراك فعال
 
       // التحقق من تاريخ انتهاء الصلاحية
-      if (sub.endDate) {
-          const endDate = new Date(sub.endDate);
-          // إذا كان تاريخ اليوم بعد تاريخ الانتهاء، فالاشتراك منتهي
-          if (new Date() > endDate) {
-              return false;
-          }
+      if (!sub.endDate) {
+          return true; // No end date means it's active (e.g., lifetime)
       }
+
+      const endDate = new Date(sub.endDate);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999); // Set to end of today to include the whole day
+      if (today > endDate) {
+          // *** إضافة: عند اكتشاف انتهاء الاشتراك، قم بتشغيل دالة الحذف ***
+          handleExpiredSubscription(sub.usedKey);
+          return false;
+      }
+
       return true; // مسجل ولديه اشتراك فعال وغير منتهي
+  }
+
+  /**
+   * *** إضافة: دالة لحذف رمز التفعيل عند انتهاء الاشتراك ***
+   * *** تعديل: ستقوم الدالة الآن بحذف بيانات الاشتراك من حساب المستخدم أيضاً ***
+   * @param {string} keyToDelete The subscription key to delete from Firestore.
+   */
+  async function handleExpiredSubscription(keyToDelete) {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      try {
+          const batch = firestore.batch();
+          const userRef = firestore.collection('users').doc(user.uid);
+
+          // 1. حذف بيانات الاشتراك من مستند المستخدم
+          batch.update(userRef, { subscription: firebase.firestore.FieldValue.delete() });
+          console.log(`Subscription data removed for user: ${user.uid}`);
+
+          // 2. حذف رمز التفعيل نفسه إذا كان موجوداً
+          if (keyToDelete) {
+              const keyRef = firestore.collection('subscriptionKeys').doc(keyToDelete);
+              batch.delete(keyRef);
+              console.log(`Successfully deleted expired key: ${keyToDelete}`);
+          }
+          await batch.commit();
+      } catch (error) {
+          console.error("Error deleting expired subscription key:", error);
+      }
   }
 
   async function applyThemeSet(themeName) {
@@ -1928,19 +1963,22 @@
           }
 
           const subscriptionData = {
-              type: keyData.type,
-              endDate: endDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-              isActive: true
+              type: keyData.type, // *** تعديل: حفظ تاريخ ووقت البدء والانتهاء الكامل ***
+              startDate: now.toISOString(),
+              endDate: endDate.toISOString(),
+              isActive: true,
+              usedKey: subscriptionKey // *** إضافة: حفظ المفتاح المستخدم مع بيانات الاشتراك ***
           };
 
           // استخدام batch لضمان تنفيذ العمليتين معاً
           const batch = firestore.batch();
-          batch.update(keyRef, { status: 'used', usedBy: user.uid, usedAt: firebase.firestore.FieldValue.serverTimestamp() });
           const userRef = firestore.collection('users').doc(user.uid);
+          // *** تعديل: تحديث حالة المفتاح بدلاً من حذفه، وربطه بالمستخدم ***
+          batch.update(keyRef, { status: 'used', usedBy: user.uid, usedAt: firebase.firestore.FieldValue.serverTimestamp() });
           batch.set(userRef, { subscription: subscriptionData }, { merge: true });
           await batch.commit();
 
-          messageEl.textContent = 'تم تفعيل الاشتراك بنجاح!';
+          messageEl.textContent = 'تم تفعيل الاشتراك بنجاح! سيتم إعادة تشغيل التطبيق.';
           messageEl.style.color = '#10b981';
           
           setTimeout(() => {
@@ -3229,15 +3267,38 @@
     
     // *** إضافة: بناء واجهة عرض حالة الاشتراك ***
     let subscriptionStatusHTML = '';
-    if (state.subscription && state.subscription.isActive) {
-        const endDate = new Date(state.subscription.endDate).toLocaleDateString('ar-DZ', { day: 'numeric', month: 'long', year: 'numeric' });
+    if (hasActiveSubscription()) {
+        // --- الحالة: مشترك فعال ---
+        const sub = state.subscription;
+        const endDate = new Date(sub.endDate);
+        const endDateFormatted = endDate.toLocaleDateString('ar-DZ', { day: 'numeric', month: 'long', year: 'numeric' });
+        const endTimeFormatted = endDate.toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' });
+
+        // حساب الأيام المتبقية
+        const now = new Date();
+        const remainingTime = endDate.getTime() - now.getTime();
+        const remainingDays = Math.ceil(remainingTime / (1000 * 60 * 60 * 24));
+
         subscriptionStatusHTML = `
             <div class="card" style="cursor:default; transform:none; align-items:flex-start; text-align:right; margin-bottom: 20px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(15, 118, 110, 0.1)); border-color: var(--primary);">
                 <div style="font-weight:700; display: flex; align-items: center; gap: 8px; color: #10b981;"><i class="fas fa-check-circle"></i> حالة الاشتراك: مشترك</div>
-                <div style="font-size:13px; color: var(--muted); margin-top: 6px; padding-right: 24px;">ينتهي اشتراكك في: <strong>${endDate}</strong></div>
+                <div style="font-size:13px; color: var(--muted); margin-top: 12px; padding-right: 24px; line-height: 1.8;">
+                    ${sub.startDate ? `<div>تاريخ الاشتراك: <strong>${new Date(sub.startDate).toLocaleDateString('ar-DZ')}</strong></div>` : ''}
+                    <div>تاريخ الانتهاء: <strong>${endDateFormatted}</strong> (على الساعة ${endTimeFormatted})</div>
+                    <div style="margin-top: 8px; font-weight: 700; color: var(--primary);">الأيام المتبقية: <strong>${remainingDays} يوم</strong></div>
+                </div>
+            </div>
+        `;
+    } else if (state.subscription && state.subscription.endDate) {
+        // الحالة: الاشتراك موجود ولكنه منتهي
+        subscriptionStatusHTML = `
+            <div class="card" style="cursor:default; transform:none; align-items:flex-start; text-align:right; margin-bottom: 20px; background: rgba(245, 158, 11, 0.05); border-color: var(--accent);">
+                <div style="font-weight:700; display: flex; align-items: center; gap: 8px; color: var(--accent);"><i class="fas fa-exclamation-triangle"></i> حالة الاشتراك: منتهي الصلاحية</div>
+                <div style="font-size:13px; color: var(--muted); margin-top: 6px; padding-right: 24px;">انتهى اشتراكك. قم بتفعيله مجدداً للوصول لجميع الميزات.</div>
             </div>
         `;
     } else {
+        // الحالة: غير مشترك إطلاقاً
         subscriptionStatusHTML = `
             <div class="card" style="cursor:default; transform:none; align-items:flex-start; text-align:right; margin-bottom: 20px; background: rgba(239, 68, 68, 0.05); border-color: #ef4444;">
                 <div style="font-weight:700; display: flex; align-items: center; gap: 8px; color: #ef4444;"><i class="fas fa-times-circle"></i> حالة الاشتراك: غير مشترك</div>
