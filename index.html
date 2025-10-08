@@ -603,6 +603,27 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  /* *** إضافة: تنسيقات لنتائج البحث *** */
+  .search-results-group h4 {
+    margin: 16px 0 8px;
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 700;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .search-result-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .search-result-item:hover {
+    background-color: var(--bg);
+  }
 </style>
 <!-- *** إضافة: تنسيقات خاصة بنافذة الرسائل *** -->
 <style>
@@ -741,6 +762,30 @@
           </div>
       </div>
   </div>
+
+  <!-- *** إضافة: نافذة منبثقة للبحث الشامل *** -->
+  <div id="searchModal" class="modal-container modal-hidden">
+      <div class="modal-backdrop" data-action="close-modal"></div>
+      <div class="modal-content" style="max-width: 500px;">
+          <div class="modal-header" style="padding: 12px 16px;">
+              <div class="form-group" style="margin: 0; flex-grow: 1; position: relative;">
+                  <i class="fas fa-search" style="position: absolute; top: 50%; right: 12px; transform: translateY(-50%); color: var(--muted);"></i>
+                  <input type="search" id="searchInput" placeholder="ابحث عن مشروع, عامل, نفقة..." style="width: 100%; padding: 10px 40px 10px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg); color: var(--text-primary); font-size: 15px; box-sizing: border-box;">
+              </div>
+          </div>
+          <div class="modal-body" id="searchResultsContainer" style="min-height: 200px; max-height: 400px;">
+              <!-- نتائج البحث ستظهر هنا -->
+              <div style="text-align: center; padding: 40px 20px; color: var(--muted);">
+                  <i class="fas fa-search" style="font-size: 32px; margin-bottom: 12px;"></i>
+                  <p>ابدأ الكتابة للبحث في التطبيق.</p>
+              </div>
+          </div>
+      </div>
+  </div>
+
+
+
+
 
 
 
@@ -2178,12 +2223,17 @@
     const welcomeName = state.currentUser?.firstName ? ` ${state.currentUser.firstName}` : '';
 
     return `
-      <section class="hero" aria-label="لوحة التحكم">
-        <div>
-          <h2 style="margin:0;font-weight:800">أهلاً بك${welcomeName}</h2>
-          <p style="margin:6px 0 0;opacity:.95">نظرة سريعة على أعمالك الحالية.</p>
+      <section class="hero" aria-label="لوحة التحكم" style="padding: 20px; gap: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h2 style="margin:0;font-weight:800">أهلاً بك${welcomeName}</h2>
+              <p style="margin:6px 0 0;opacity:.95">نظرة سريعة على أعمالك الحالية.</p>
+            </div>
+            <button id="openSearchModalBtn" class="btn icon-btn" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.2);" title="بحث شامل">
+                <i class="fas fa-search"></i>
+            </button>
         </div>
-        <div class="kpis" style="margin-top:12px">
+        <div class="kpis">
             <div class="kpi">
                 <div style="font-size:18px;font-weight:800">${totalProjects}</div>
                 <div style="font-size:12px;opacity:.9">إجمالي المشاريع</div>
@@ -7237,9 +7287,188 @@
           helperBtn.disabled = false;
       }
   }
+  // =================================================================
+  // 10. SEARCH FUNCTIONALITY
+  // =================================================================
+  
+  function openSearchModal() {
+      openModal('searchModal');
+      document.getElementById('searchInput').focus();
+  }
+
+  function performSearch(query) {
+      const container = document.getElementById('searchResultsContainer');
+      if (!query) {
+          container.innerHTML = `
+              <div style="text-align: center; padding: 40px 20px; color: var(--muted);">
+                  <i class="fas fa-search" style="font-size: 32px; margin-bottom: 12px;"></i>
+                  <p>ابدأ الكتابة للبحث في التطبيق.</p>
+              </div>`;
+          return;
+      }
+
+      const results = {
+          projects: state.projects.filter(p => p.name?.toLowerCase().includes(query)),
+          workers: state.workers.filter(w => w.name?.toLowerCase().includes(query)),
+          expenses: state.expenses.filter(e => e.description?.toLowerCase().includes(query)),
+          notes: state.notes.filter(n => (n.title && n.title.toLowerCase().includes(query)) || (n.content && n.content.toLowerCase().includes(query))),
+          suppliers: state.suppliers.filter(s => s.name?.toLowerCase().includes(query)),
+          inventory: state.inventory.filter(i => i.name?.toLowerCase().includes(query)),
+          debts: state.debts.filter(d => d.person?.toLowerCase().includes(query) || d.notes?.toLowerCase().includes(query)),
+          calendarEvents: state.calendarEvents.filter(e => e.title?.toLowerCase().includes(query)),
+          companyProfiles: state.companyProfiles.filter(p => p.profileName?.toLowerCase().includes(query) || p.ownerName?.toLowerCase().includes(query)),
+      };
+
+      let html = '';
+
+      if (results.projects.length) {
+          html += '<div class="search-results-group"><h4>المشاريع</h4>';
+          html += results.projects.map(p => `
+              <div class="search-result-item" data-type="project" data-id="${p.id}">
+                  <i class="fas fa-hard-hat" style="color: var(--muted);"></i>
+                  <span>${p.name}</span>
+              </div>
+          `).join('');
+          html += '</div>';
+      }
+      if (results.workers.length) {
+          html += '<div class="search-results-group"><h4>العمال</h4>';
+          html += results.workers.map(w => `
+              <div class="search-result-item" data-type="worker" data-id="${w.id}">
+                  <i class="fas fa-user" style="color: var(--muted);"></i>
+                  <span>${w.name}</span>
+              </div>
+          `).join('');
+          html += '</div>';
+      }
+      if (results.expenses.length) {
+          html += '<div class="search-results-group"><h4>النفقات</h4>';
+          html += results.expenses.map(e => `
+              <div class="search-result-item" data-type="expense" data-id="${e.id}">
+                  <i class="fas fa-wallet" style="color: var(--muted);"></i>
+                  <span>${e.description}</span>
+              </div>
+          `).join('');
+          html += '</div>';
+      }
+      if (results.notes.length) {
+          html += '<div class="search-results-group"><h4>الملاحظات</h4>';
+          html += results.notes.map(n => `
+              <div class="search-result-item" data-type="note" data-id="${n.id}">
+                  <i class="fas fa-sticky-note" style="color: var(--muted);"></i>
+                  <span>${n.title || 'ملاحظة بدون عنوان'}</span>
+              </div>
+          `).join('');
+          html += '</div>';
+      }
+      if (results.suppliers.length) {
+          html += '<div class="search-results-group"><h4>الموردين</h4>';
+          html += results.suppliers.map(s => `
+              <div class="search-result-item" data-type="supplier" data-id="${s.id}">
+                  <i class="fas fa-truck" style="color: var(--muted);"></i>
+                  <span>${s.name}</span>
+              </div>
+          `).join('');
+          html += '</div>';
+      }
+      if (results.inventory.length) {
+          html += '<div class="search-results-group"><h4>المخزون</h4>';
+          html += results.inventory.map(i => `
+              <div class="search-result-item" data-type="inventory" data-id="${i.id}">
+                  <i class="fas fa-toolbox" style="color: var(--muted);"></i>
+                  <span>${i.name}</span>
+              </div>
+          `).join('');
+          html += '</div>';
+      }
+      if (results.debts.length) {
+          html += '<div class="search-results-group"><h4>الديون</h4>';
+          html += results.debts.map(d => `
+              <div class="search-result-item" data-type="debt" data-id="${d.id}">
+                  <i class="fas fa-book-reader" style="color: var(--muted);"></i>
+                  <span>دين على: ${d.person}</span>
+              </div>
+          `).join('');
+          html += '</div>';
+      }
+      if (results.calendarEvents.length) {
+          html += '<div class="search-results-group"><h4>الجدول الزمني</h4>';
+          html += results.calendarEvents.map(e => `
+              <div class="search-result-item" data-type="calendarEvent" data-id="${e.id}">
+                  <i class="fas fa-calendar-alt" style="color: var(--muted);"></i>
+                  <span>${e.title}</span>
+              </div>
+          `).join('');
+          html += '</div>';
+      }
+      if (results.companyProfiles.length) {
+          html += '<div class="search-results-group"><h4>الملفات التعريفية</h4>';
+          html += results.companyProfiles.map(p => `
+              <div class="search-result-item" data-type="profile" data-id="${p.id}">
+                  <i class="fas fa-id-card" style="color: var(--muted);"></i>
+                  <span>${p.profileName}</span>
+              </div>
+          `).join('');
+          html += '</div>';
+      }
+
+      container.innerHTML = html || `<div style="text-align: center; padding: 40px 20px; color: var(--muted);"><p>لا توجد نتائج للبحث عن "${query}"</p></div>`;
+  }
+
   // First-time setup
   // *** تحسين: دالة لتهيئة جميع معالجات الأحداث مرة واحدة ***
   function initializeEventListeners() {
+    // Search Modal Listeners
+    document.getElementById('searchModal').addEventListener('click', (e) => {
+        if (e.target.dataset.action === 'close-modal' || e.target.classList.contains('modal-backdrop')) {
+            closeModal('searchModal');
+        }
+        const resultItem = e.target.closest('.search-result-item');
+        if (resultItem) {
+            const { type, id } = resultItem.dataset;
+            closeModal('searchModal');
+            switch (type) {
+                case 'project':
+                    renderView('project-details', { id: parseInt(id) });
+                    break;
+                case 'worker':
+                    renderView('worker-details', { id: parseInt(id) });
+                    break;
+                case 'expense':
+                    renderView('expense-details', { id: parseInt(id) });
+                    break;
+                case 'note':
+                    openNoteModal(parseInt(id));
+                    break;
+                case 'supplier':
+                    renderView('supplier-details', { id: parseInt(id) });
+                    break;
+                case 'inventory':
+                    renderView('inventory-details', { id: parseInt(id) });
+                    break;
+                case 'debt':
+                    renderView('debt-details', { id: parseInt(id) });
+                    break;
+                case 'calendarEvent':
+                    openEventDetailsModal(parseInt(id));
+                    break;
+                case 'profile':
+                    renderView('profile-details', { id: parseInt(id) });
+                    break;
+            }
+        }
+    });
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        performSearch(e.target.value.toLowerCase());
+    });
+
+    document.body.addEventListener('click', e => {
+        if (e.target.closest('#openSearchModalBtn')) {
+            openSearchModal();
+        }
+    });
+
     // Debt Modal Event Listeners
     document.getElementById('debtForm')?.addEventListener('submit', handleDebtFormSubmit);
     document.getElementById('debtModal')?.addEventListener('click', (e) => {
