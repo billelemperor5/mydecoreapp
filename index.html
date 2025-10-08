@@ -594,6 +594,33 @@
     text-overflow: ellipsis;
   }
 </style>
+<!-- *** إضافة: تنسيقات خاصة بنافذة الرسائل *** -->
+<style>
+  .message-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .message-item {
+    background: var(--bg);
+    padding: 12px;
+    border-radius: 8px;
+    border-right: 4px solid var(--primary);
+  }
+  .message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .message-text {
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+</style>
 </head>
 <body>
   <!-- splash -->
@@ -653,7 +680,11 @@
                 <div style="font-size:13px;color:var(--muted)">مدير الديكور الخاص بك</div>
                 </div>
             </div>
+            <!-- *** إضافة: زر الرسائل الجديد في الشريط العلوي *** -->
             <div style="display:flex;gap:8px;align-items:center; position: relative;">
+                <button id="messagesBtn" class="btn icon-btn ghost" title="الرسائل">
+                    <i class="fas fa-envelope"></i>
+                </button>
                 <button id="userProfileBtn" class="btn icon-btn ghost" title="الحساب">
                     <i id="userProfileIcon" class="fas fa-sign-in-alt"></i>
                 </button>
@@ -1211,25 +1242,89 @@
   <!-- *** إضافة: نافذة منبثقة لتفعيل الاشتراك *** -->
   <div id="subscriptionModal" class="modal-container modal-hidden">
       <div class="modal-backdrop" data-action="close-modal"></div>
-      <div class="modal-content" style="max-width: 400px;">
+      <!-- *** تحسين: إعادة تصميم نافذة إدخال رمز الاشتراك *** -->
+      <div class="modal-content" style="max-width: 420px;">
           <div class="modal-header">
-              <h3>تفعيل الاشتراك</h3>
+              <h3>الترقية إلى النسخة الكاملة</h3>
               <button class="close-btn" data-action="close-modal">&times;</button>
           </div>
-          <div class="modal-body">
+          <div class="modal-body" style="text-align: center;">
+              <div class="icon" style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #d97706); font-size: 28px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                  <i class="fas fa-gem"></i>
+              </div>
+              <p style="color: var(--muted); line-height: 1.6; margin-top: 0; margin-bottom: 24px;">
+                  أدخل رمز التفعيل الذي حصلت عليه لفتح جميع الميزات الاحترافية في التطبيق.
+              </p>
               <form id="subscriptionForm">
                   <div class="form-group">
-                      <label for="subscriptionKeyInput">رمز الاشتراك</label>
-                      <input type="text" id="subscriptionKeyInput" required placeholder="أدخل رمز الاشتراك هنا">
+                      <label for="subscriptionKeyInput" style="text-align: right;">رمز التفعيل</label>
+                      <input type="text" id="subscriptionKeyInput" required placeholder="XXXX-XXXX-XXXX-XXXX" style="text-align: center; font-size: 18px; letter-spacing: 2px; font-weight: 700;">
                   </div>
                   <div id="subscriptionMessage" style="margin-top: 15px; text-align: center; font-weight: 700; min-height: 20px;"></div>
                   <div class="form-actions">
-                      <button type="submit" id="activateSubscriptionBtn" class="btn">تفعيل الاشتراك</button>
+                      <button type="submit" id="activateSubscriptionBtn" class="btn" style="width: 100%; padding: 12px; font-size: 16px;">
+                          <i class="fas fa-check-circle" style="margin-left: 8px;"></i> تفعيل الآن
+                      </button>
                   </div>
               </form>
           </div>
       </div>
   </div>
+
+  <!-- *** إضافة: نافذة منبثقة لإرسال الرسائل *** -->
+  <div id="messageModal" class="modal-container modal-hidden">
+      <div class="modal-backdrop" data-action="close-modal"></div>
+      <div class="modal-content">
+          <div class="modal-header">
+              <h3>إرسال رسالة الى العمال</h3>
+              <button class="close-btn" data-action="close-modal">&times;</button>
+          </div>
+          <div class="modal-body">
+              <form id="messageForm">
+                  <!-- *** تعديل: تم إزالة حقل اختيار العامل، حيث يتم الإرسال لنفس الحساب *** -->
+                  <div class="form-group">
+                      <label for="messageText">محتوى الرسالة</label>
+                      <textarea id="messageText" rows="5" required placeholder="اكتب رسالتك هنا..."></textarea>
+                  </div>
+                  <div class="form-actions">
+                      <button type="submit" class="btn">إرسال</button>
+                  </div>
+              </form>
+          </div>
+      </div>
+  </div>
+
+  <!-- *** إضافة: نافذة منبثقة احترافية لعرض تفاصيل الاشتراك *** -->
+  <div id="subscriptionDetailsModal" class="modal-container modal-hidden">
+      <div class="modal-backdrop" data-action="close-modal"></div>
+      <div class="modal-content" style="max-width: 420px;">
+          <div class="modal-header">
+              <h3>تفاصيل اشتراكك</h3>
+              <button class="close-btn" data-action="close-modal">&times;</button>
+          </div>
+          <div class="modal-body" id="subscriptionDetailsContent" style="line-height: 1.8;">
+              <!-- سيتم حقن التفاصيل هنا بواسطة JavaScript -->
+              <div style="text-align: center; padding: 20px;">
+                  <div class="icon" style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); font-size: 28px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                      <i class="fas fa-shield-alt"></i>
+                  </div>
+                  <h4 style="margin: 0 0 4px;">النسخة الكاملة</h4>
+                  <p style="color: var(--muted); margin-top: 0;">أنت تستمتع بجميع الميزات الاحترافية.</p>
+              </div>
+              <div id="subDetailsList">
+                  <!-- سيتم حقن قائمة التفاصيل هنا -->
+              </div>
+          </div>
+          <div class="form-actions" style="padding: 16px; border-top: 1px solid var(--border-color);">
+              <button data-action="close-modal" class="btn ghost" style="width: 100%;">إغلاق</button>
+          </div>
+      </div>
+  </div>
+
+
+
+
+
 
 
 
@@ -1270,6 +1365,7 @@
       // *** إصلاح: تصحيح مخطط المشتريات ليشمل جميع الحقول ويستخدم firestoreId كمفتاح أساسي ***
       purchases: 'firestoreId, workerId, status, date',
       expenses: '++id, date, projectId, workerId, supplierId, category, paymentStatus',
+      messages: '++id, receiverUid, timestamp', // *** إضافة: جدول للرسائل ***
       projectPayments: '++id, projectId, date',
       api_configs: '++id, name, provider', // New table for AI API configurations, added provider index
       companyProfiles: '++id, profileName', 
@@ -1304,10 +1400,12 @@
     inventory: [],
     debts: [], // *** إضافة: حالة لتخزين الديون ***
     projectPayments: [],
+    messages: [], // *** إضافة: حالة لتخزين الرسائل ***
       hasActiveCalendarEvents: false, // *** إضافة: حالة لتتبع وجود أحداث نشطة في الجدول الزمني ***
       purchases: [], // *** إضافة: حالة لتخزين المشتريات للمراجعة ***
     calendarEvents: [],
     hasNewPurchases: false, // *** إضافة: حالة لتتبع إشعارات المشتريات الجديدة ***
+    currentUser: null, // *** إضافة: لتخزين معلومات المستخدم الحالي ***
     companyProfiles: [],
     api_configs: []
   };
@@ -1437,6 +1535,7 @@
       state.debts = await db.debts.toArray();
       state.calendarEvents = await db.calendarEvents.toArray();
       state.purchases = await db.purchases.toArray();
+      state.messages = await db.messages.toArray();
       state.expenses = await db.expenses.toArray();
       state.companyProfiles = await db.companyProfiles.toArray();
       state.api_configs = await db.api_configs.toArray();
@@ -2013,8 +2112,8 @@
     // الميزة مقيدة إذا كان المستخدم مسجلاً دخوله ولكنه غير مشترك
     const isRestricted = isLoggedIn && !isSubscribed;
 
-    // لا تقيد بطاقة "ميزات إضافية" أو "المشتريات" لأنها تحتوي على ميزات مجانية ومدفوعة
-    const featureIsAlwaysAccessible = ['more_features', 'purchases'].includes(m.key);
+    // لا تقيد بطاقة "ميزات إضافية" لأنها تحتوي على ميزات مجانية ومدفوعة
+    const featureIsAlwaysAccessible = ['more_features'].includes(m.key);
     const showLock = isRestricted && !featureIsAlwaysAccessible;
 
     return `
@@ -2065,11 +2164,13 @@
     const activeWorkers = state.workers.length;
     const totalProjects = state.projects.length;
     const mainGridHTML = appModules.map(createCardHTML).join('');
+    // *** تعديل: إضافة اسم المستخدم إلى رسالة الترحيب ***
+    const welcomeName = state.currentUser?.firstName ? ` ${state.currentUser.firstName}` : '';
 
     return `
       <section class="hero" aria-label="لوحة التحكم">
         <div>
-          <h2 style="margin:0;font-weight:800">أهلاً بك</h2>
+          <h2 style="margin:0;font-weight:800">أهلاً بك${welcomeName}</h2>
           <p style="margin:6px 0 0;opacity:.95">نظرة سريعة على أعمالك الحالية.</p>
         </div>
         <div class="kpis" style="margin-top:12px">
@@ -3274,50 +3375,59 @@
     const isDark = document.body.classList.contains('dark');
     
     // *** إضافة: بناء واجهة عرض حالة الاشتراك ***
+    // *** تحسين: إعادة تصميم بطاقة حالة الاشتراك لتكون أكثر احترافية ***
     let subscriptionStatusHTML = '';
     if (hasActiveSubscription()) {
         // --- الحالة: مشترك فعال ---
         const sub = state.subscription;
         const endDate = new Date(sub.endDate);
         const endDateFormatted = endDate.toLocaleDateString('ar-DZ', { day: 'numeric', month: 'long', year: 'numeric' });
-        const endTimeFormatted = endDate.toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' });
 
         // حساب الأيام المتبقية
         const now = new Date();
         const remainingTime = endDate.getTime() - now.getTime();
         const remainingDays = Math.ceil(remainingTime / (1000 * 60 * 60 * 24));
+        const remainingDaysText = remainingDays > 0 ? `${remainingDays} يوم` : 'أقل من يوم';
 
         subscriptionStatusHTML = `
-            <div class="card" style="cursor:default; transform:none; align-items:flex-start; text-align:right; margin-bottom: 20px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(15, 118, 110, 0.1)); border-color: var(--primary);">
-                <div style="font-weight:700; display: flex; align-items: center; gap: 8px; color: #10b981;"><i class="fas fa-check-circle"></i> حالة الاشتراك: مشترك</div>
-                <div style="font-size:13px; color: var(--muted); margin-top: 12px; padding-right: 24px; line-height: 1.8;">
-                    <!-- *** تعديل: تغيير تنسيق تاريخ الاشتراك لعرض اسم الشهر *** -->
-                    ${sub.startDate ? `<div>تاريخ الاشتراك: <strong>${new Date(sub.startDate).toLocaleDateString('ar-DZ', { day: 'numeric', month: 'long', year: 'numeric' })}</strong></div>` : ''}
-                    <!-- *** تعديل: تحسين عرض تاريخ ووقت الانتهاء *** -->
-                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
-                        <i class="fas fa-calendar-times" style="color: var(--muted);"></i>تاريخ الانتهاء: <strong>${endDateFormatted}</strong>
+            <div class="card" data-action="open-subscription-details" style="align-items:stretch; text-align:right; margin-bottom: 20px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(15, 118, 110, 0.1)); border-color: var(--primary);">
+                <div style="display:flex; align-items:center; gap: 12px;">
+                    <div class="icon" style="width:48px; height:48px; background: linear-gradient(135deg, #10b981, #059669); font-size: 20px; margin-bottom: 0;"><i class="fas fa-shield-alt"></i></div>
+                    <div>
+                        <div style="font-weight:800; font-size: 16px; color: #10b981;">أنت مشترك في النسخة الكاملة</div>
+                        <div style="font-size:13px; color: var(--muted); margin-top: 4px;">ينتهي الاشتراك في: <strong>${endDateFormatted}</strong></div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
-                        <i class="fas fa-clock" style="color: var(--muted);"></i>وقت الانتهاء: <strong>${endTimeFormatted}</strong>
-                    </div>
-                    <div style="margin-top: 8px; font-weight: 700; color: var(--primary);"><i class="fas fa-hourglass-half" style="margin-left: 6px;"></i>الأيام المتبقية: <strong>${remainingDays} يوم</strong></div>
+                    <i class="fas fa-chevron-left" style="color: var(--muted); align-self: center; margin-right: auto;"></i>
+                </div>
+                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); text-align: center; font-weight: 700; color: var(--primary);">
+                    <i class="fas fa-hourglass-half" style="margin-left: 6px;"></i>الأيام المتبقية: ${remainingDaysText}
                 </div>
             </div>
         `;
     } else if (state.subscription && state.subscription.endDate) {
         // الحالة: الاشتراك موجود ولكنه منتهي
         subscriptionStatusHTML = `
-            <div class="card" style="cursor:default; transform:none; align-items:flex-start; text-align:right; margin-bottom: 20px; background: rgba(245, 158, 11, 0.05); border-color: var(--accent);">
-                <div style="font-weight:700; display: flex; align-items: center; gap: 8px; color: var(--accent);"><i class="fas fa-exclamation-triangle"></i> حالة الاشتراك: منتهي الصلاحية</div>
-                <div style="font-size:13px; color: var(--muted); margin-top: 6px; padding-right: 24px;">انتهى اشتراكك. قم بتفعيله مجدداً للوصول لجميع الميزات.</div>
+            <div class="card" style="cursor:default; transform:none; align-items:stretch; text-align:right; margin-bottom: 20px; background: rgba(245, 158, 11, 0.05); border-color: var(--accent);">
+                <div style="display:flex; align-items:center; gap: 12px;">
+                    <div class="icon" style="width:48px; height:48px; background: linear-gradient(135deg, #f59e0b, #d97706); font-size: 20px; margin-bottom: 0;"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div>
+                        <div style="font-weight:800; font-size: 16px; color: var(--accent);">انتهت صلاحية اشتراكك</div>
+                        <div style="font-size:13px; color: var(--muted); margin-top: 4px;">قم بتجديد اشتراكك للاستفادة من الميزات الكاملة.</div>
+                    </div>
+                </div>
             </div>
         `;
     } else {
         // الحالة: غير مشترك إطلاقاً
         subscriptionStatusHTML = `
-            <div class="card" style="cursor:default; transform:none; align-items:flex-start; text-align:right; margin-bottom: 20px; background: rgba(239, 68, 68, 0.05); border-color: #ef4444;">
-                <div style="font-weight:700; display: flex; align-items: center; gap: 8px; color: #ef4444;"><i class="fas fa-times-circle"></i> حالة الاشتراك: غير مشترك</div>
-                <div style="font-size:13px; color: var(--muted); margin-top: 6px; padding-right: 24px;">قم بتفعيل اشتراكك للوصول إلى جميع الميزات.</div>
+            <div class="card" style="cursor:default; transform:none; align-items:stretch; text-align:right; margin-bottom: 20px; background: rgba(239, 68, 68, 0.05); border-color: #ef4444;">
+                <div style="display:flex; align-items:center; gap: 12px;">
+                    <div class="icon" style="width:48px; height:48px; background: linear-gradient(135deg, #ef4444, #b91c1c); font-size: 20px; margin-bottom: 0;"><i class="fas fa-lock"></i></div>
+                    <div>
+                        <div style="font-weight:800; font-size: 16px; color: #ef4444;">أنت تستخدم النسخة المجانية</div>
+                        <div style="font-size:13px; color: var(--muted); margin-top: 4px;">قم بالترقية لفتح جميع الميزات الاحترافية.</div>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -3332,8 +3442,18 @@
         ${subscriptionStatusHTML}
 
         <!-- *** إضافة: بطاقة تفعيل الاشتراك *** -->
-        <div onclick="openModal('subscriptionModal')" class="card" style="align-items:flex-start; text-align:right; flex-direction: row; justify-content: space-between; margin-bottom: 12px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1));">
-            <div style="display:flex; align-items:center; gap: 12px;"><div class="icon" style="width:48px; height:48px; background: linear-gradient(135deg,#f59e0b,#d97706); font-size: 20px; margin-bottom: 0;"><i class="fas fa-star"></i></div><div><div style="font-weight:700;">تفعيل الاشتراك</div><div style="font-size:13px; color: var(--muted)">أدخل رمز الاشتراك الخاص بك هنا</div></div></div><i class="fas fa-chevron-left" style="color: var(--muted); align-self: center;"></i></div>
+        <!-- *** تحسين: إعادة تصميم بطاقة تفعيل الاشتراك لتكون أكثر احترافية *** -->
+        <div onclick="openModal('subscriptionModal')" class="card" style="align-items: stretch; text-align: right; flex-direction: column; margin-bottom: 12px; background: linear-gradient(135deg, #0f172a, #071026); color: white; padding: 20px; border: 1px solid var(--accent);">
+            <div style="display:flex; align-items:center; gap: 16px;">
+                <div class="icon" style="width:56px; height:56px; background: linear-gradient(135deg, #f59e0b, #d97706); font-size: 24px; margin-bottom: 0; flex-shrink: 0;">
+                    <i class="fas fa-gem"></i>
+                </div>
+                <div style="flex-grow: 1;">
+                    <div style="font-weight:800; font-size: 18px;">الترقية إلى النسخة الكاملة</div>
+                    <div style="font-size:14px; color: #d1d5db; margin-top: 4px;">أدخل رمز التفعيل لفتح جميع الميزات الاحترافية.</div>
+                </div>
+            </div>
+        </div>
         <div id="navigateToThemes" class="card" style="align-items:flex-start; text-align:right; flex-direction: row; justify-content: space-between; margin-bottom: 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center; width: 100%;">
                 <div style="display:flex; align-items:center; gap: 12px;">
@@ -4123,6 +4243,76 @@
         console.error('Oops, something went wrong!', error);
         alert('حدث خطأ أثناء إنشاء الصورة.');
     }
+  }
+
+  // *** إضافة: دوال خاصة بنافذة الرسائل ***
+  function openMessageModal() {
+      const user = auth.currentUser;
+      if (!user) {
+          showCustomToast('يجب تسجيل الدخول لإرسال رسالة.', 'error');
+          return;
+      }
+      // *** إضافة: التحقق من الاشتراك قبل فتح نافذة الرسائل ***
+      if (!hasActiveSubscription()) {
+          openModal('subscriptionModal');
+          return;
+      }
+
+      const form = document.getElementById('messageForm');
+      if (form) {
+          form.reset();
+      }
+      openModal('messageModal');
+  }
+
+  /**
+   * *** تعديل: إرسال الرسالة إلى نفس هوية المستخدم (UID) ***
+   * العامل المسجل بنفس الحساب سيستقبل الرسالة.
+   */
+  async function handleMessageFormSubmit(e) {
+      e.preventDefault();
+      const user = auth.currentUser;
+      if (!user) {
+          showCustomToast('يجب تسجيل الدخول لإرسال رسالة.', 'error');
+          return;
+      }
+      // *** إضافة: التحقق من الاشتراك قبل إرسال الرسالة ***
+      if (!hasActiveSubscription()) {
+          showCustomToast('هذه الميزة تتطلب اشتراكاً فعالاً.', 'error');
+          closeModal('messageModal');
+          openModal('subscriptionModal');
+          return;
+      }
+      openModal('messageModal');
+  }
+
+  /**
+   * *** تعديل: إرسال الرسالة إلى نفس هوية المستخدم (UID) ***
+   * العامل المسجل بنفس الحساب سيستقبل الرسالة.
+   */
+  async function handleMessageFormSubmit(e) {
+      e.preventDefault();
+      const user = auth.currentUser;
+      if (!user) {
+          showCustomToast('يجب تسجيل الدخول لإرسال رسالة.', 'error');
+          return;
+      }
+
+      // *** تعديل: تحديد المستلم ليكون هوية المستخدم الحالي (المدير/العامل) ***
+      const messageData = {
+          text: document.getElementById('messageText').value,
+          receiverUid: user.uid, 
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      try {
+          await firestore.collection('users').doc(user.uid).collection('messages').add(messageData);
+          showToast('تم إرسال الرسالة بنجاح.');
+          closeModal('messageModal');
+      } catch (error) {
+          console.error("Error sending message:", error);
+          showCustomToast('فشل إرسال الرسالة.', 'error');
+      }
   }
 
   // *** إضافة: دالة للعودة إلى الواجهة السابقة ***
@@ -7094,12 +7284,19 @@
         if (moduleCard) { 
             // *** إضافة: التحقق من الاشتراك قبل الوصول للميزات المقيدة ***
             const isSubscribed = hasActiveSubscription();
-            const featureIsAlwaysAccessible = ['more_features', 'purchases'].includes(moduleCard.dataset.key);
+            const featureIsAlwaysAccessible = ['more_features'].includes(moduleCard.dataset.key);
             if (auth.currentUser && !isSubscribed && !featureIsAlwaysAccessible) {
                 openModal('subscriptionModal');
                 return;
             }
             renderView(moduleCard.dataset.key, {});
+            return;
+        }
+        
+        // *** إضافة: معالج لفتح تفاصيل الاشتراك ***
+        const subDetailsCard = target.closest('[data-action="open-subscription-details"]');
+        if (subDetailsCard) {
+            openSubscriptionDetailsModal();
             return;
         }
 
@@ -7184,6 +7381,59 @@
     if (subscriptionForm) {
         subscriptionForm.addEventListener('submit', handleSubscriptionActivation);
     }
+
+    // *** إضافة: معالج حدث لزر ونافذة الرسائل ***
+    document.getElementById('messagesBtn')?.addEventListener('click', openMessageModal);
+    document.getElementById('messageForm')?.addEventListener('submit', handleMessageFormSubmit);
+    document.getElementById('messageModal')?.addEventListener('click', (e) => {
+        if (e.target.dataset.action === 'close-modal' || e.target.classList.contains('modal-backdrop')) closeModal('messageModal');
+    });
+
+      // *** إصلاح: نقل تعريف دالة تفاصيل الاشتراك وربطها هنا ***
+      function openSubscriptionDetailsModal() {
+          const sub = state.subscription;
+          if (!sub) return;
+
+          const subTypes = {
+              'daily': 'يومي',
+              'monthly': 'شهري',
+              'six-months': 'نصف سنوي',
+              'yearly': 'سنوي'
+          };
+
+          const details = [
+              { label: 'نوع الباقة', value: subTypes[sub.type] || 'غير معروف', icon: 'fa-box-open' },
+              { label: 'تاريخ البدء', value: new Date(sub.startDate).toLocaleString('ar-DZ', { dateStyle: 'full', timeStyle: 'short' }), icon: 'fa-calendar-plus' },
+              { label: 'تاريخ الانتهاء', value: new Date(sub.endDate).toLocaleString('ar-DZ', { dateStyle: 'full', timeStyle: 'short' }), icon: 'fa-calendar-times' },
+              { label: 'رمز التفعيل المستخدم', value: sub.usedKey, icon: 'fa-key' }
+          ];
+
+          const detailsHTML = details.map(item => `
+              <div style="display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
+                  <i class="fas ${item.icon}" style="color: var(--muted); font-size: 16px; margin-top: 5px; width: 20px; text-align: center;"></i>
+                  <div style="flex-grow: 1;">
+                      <div style="font-size: 13px; color: var(--muted);">${item.label}</div>
+                      <div style="font-weight: 700; font-size: 15px; margin-top: 2px; direction: ltr; text-align: right; word-break: break-all;">${item.value}</div>
+                  </div>
+              </div>
+          `).join('');
+
+          document.getElementById('subDetailsList').innerHTML = detailsHTML;
+          openModal('subscriptionDetailsModal');
+      }
+
+      // ربط حدث النقر لبطاقة تفاصيل الاشتراك
+      const subDetailsCard = document.querySelector('[data-action="open-subscription-details"]');
+      if (subDetailsCard) {
+          subDetailsCard.addEventListener('click', openSubscriptionDetailsModal);
+      }
+
+      // ربط حدث النقر لإغلاق نافذة تفاصيل الاشتراك
+      document.getElementById('subscriptionDetailsModal')?.addEventListener('click', (e) => {
+          if (e.target.dataset.action === 'close-modal' || e.target.classList.contains('modal-backdrop')) {
+              closeModal('subscriptionDetailsModal');
+          }
+      });
   }
 
   // *** إصلاح: إضافة معالج حدث لإغلاق نافذة تفعيل الاشتراك ***
@@ -7294,11 +7544,17 @@
                 if (doc.exists) {
                     const userData = doc.data();
                     userDisplayName.textContent = `${userData.firstName} ${userData.lastName}`;
+                    // *** إضافة: تخزين بيانات المستخدم في الحالة العامة ***
+                    state.currentUser = userData;
                     userDisplayEmail.textContent = user.email;
                 } else {
+                    // *** إصلاح: مسح بيانات المستخدم السابق إذا لم يتم العثور على بيانات جديدة ***
+                    state.currentUser = null;
                     userDisplayName.textContent = user.email;
                     userDisplayEmail.textContent = 'مستخدم';
                 }
+                // *** إصلاح: إعادة عرض الواجهة الرئيسية بعد جلب بيانات المستخدم لضمان ظهور اسمه ***
+                if (state.currentView.name === 'home') renderView('home');
             }).catch(() => {
                 userDisplayName.textContent = user.email;
             });
@@ -7357,6 +7613,8 @@
             loggedInView.style.display = 'none';
             loggedOutView.style.display = 'block';
             userProfileIcon.className = 'fas fa-sign-in-alt';
+            // *** إضافة: مسح بيانات المستخدم عند تسجيل الخروج ***
+            state.currentUser = null;
         }
       });
   });
