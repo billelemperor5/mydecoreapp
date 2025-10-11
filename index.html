@@ -624,6 +624,17 @@
   .search-result-item:hover {
     background-color: var(--bg);
   }
+  /* *** إضافة: تنسيق خاص للبطاقة التي تأخذ عرض كامل *** */
+  .full-width-card {
+    grid-column: 1 / -1; /* اجعل البطاقة تمتد على جميع الأعمدة */
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    text-align: right;
+  }
+  .full-width-card .icon {
+    margin-bottom: 0;
+  }
 </style>
 <!-- *** إضافة: تنسيقات خاصة بنافذة الرسائل *** -->
 <style>
@@ -653,6 +664,38 @@
   }
 </style>
 </head>
+<!-- *** إضافة: تنسيقات خاصة بواجهة البلاغات *** -->
+<style>
+  .report-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(2,6,23,.04);
+    border-right: 4px solid; /* سيتم تحديد اللون بواسطة JavaScript */
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .report-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(2,6,23,.06);
+  }
+  .report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .report-worker-name {
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .report-note {
+    color: var(--muted);
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+</style>
 <body>
   <!-- splash -->
   <div id="splash" class="splash" role="dialog" aria-hidden="false">
@@ -731,9 +774,10 @@
                         </button>
                     </div>
                     <!-- Logged Out View -->
-                    <div id="loggedOutView" style="display: none; display: flex; flex-direction: column; gap: 8px;">
-                        <a href="login.html" class="btn" style="text-decoration: none;"><i class="fas fa-sign-in-alt" style="margin-left: 8px;"></i> تسجيل الدخول</a>
-                        <a href="signup.html" class="btn ghost" style="text-decoration: none;">إنشاء حساب جديد</a>
+                    <!-- *** تعديل: إصلاح وتحسين مظهر أزرار تسجيل الدخول وإنشاء الحساب *** -->
+                    <div id="loggedOutView" style="display: none; flex-direction: column; gap: 8px;">
+                        <a href="login.html" class="btn" style="text-decoration: none; width: 100%; box-sizing: border-box;"><i class="fas fa-sign-in-alt" style="margin-left: 8px;"></i> تسجيل الدخول</a>
+                        <a href="signup.html" class="btn ghost" style="text-decoration: none; width: 100%; box-sizing: border-box;">إنشاء حساب جديد</a>
                     </div>
                 </div>
                 <button id="themeToggleHeader" class="btn icon-btn ghost" title="تبديل الوضع"><i class="fas fa-moon"></i></button>
@@ -1376,6 +1420,34 @@
       </div>
   </div>
 
+  <!-- *** إضافة: نافذة منبثقة لمراجعة البلاغات (للمدير) *** -->
+  <div id="reportReviewModal" class="modal-container modal-hidden">
+      <div class="modal-backdrop" data-action="close-modal"></div>
+      <div class="modal-content" style="max-width: 450px;">
+          <div class="modal-header">
+              <h3>مراجعة بلاغ العامل</h3>
+              <button class="close-btn" data-action="close-modal">&times;</button>
+          </div>
+          <div class="modal-body" id="reportReviewContent">
+              <!-- تفاصيل البلاغ سيتم حقنها هنا -->
+          </div>
+          <div class="modal-footer" style="padding: 16px; border-top: 1px solid var(--border-color);">
+              <form id="reportReviewForm">
+                  <input type="hidden" id="reviewReportId">
+                  <div class="form-group" style="margin-bottom: 12px;">
+                      <label for="adminNote">ملاحظة المدير (اختياري)</label>
+                      <textarea id="adminNote" rows="2" placeholder="أضف ملاحظة للعامل..."></textarea>
+                  </div>
+                  <div class="form-actions" style="margin-top: 0;">
+                      <button type="button" id="rejectReportBtn" class="btn" style="background-color: #ef4444; margin-left: auto; margin-right: 0;"><i class="fas fa-times" style="margin-left: 6px;"></i> رفض</button>
+                      <button type="button" id="approveReportBtn" class="btn" style="background-color: #10b981; margin-left: 0;"><i class="fas fa-check" style="margin-left: 6px;"></i> موافقة</button>
+                  </div>
+              </form>
+          </div>
+      </div>
+  </div>
+
+
 
 
 
@@ -1424,6 +1496,7 @@
       projectPayments: '++id, projectId, date',
       api_configs: '++id, name, provider', // New table for AI API configurations, added provider index
       companyProfiles: '++id, profileName', 
+      reports: 'firestoreId, workerId, status, date', // *** إضافة: جدول للبلاغات ***
       notes: '++id, updatedAt',
       app_settings: 'key, subscriptionData' // A key-value store. Added subscriptionData for subscription info.
   }).upgrade(tx => { 
@@ -1454,6 +1527,7 @@
     notes: [], // *** إصلاح: إضافة حالة لتخزين المهام ***
     inventory: [],
     debts: [], // *** إضافة: حالة لتخزين الديون ***
+    reports: [], // *** إضافة: حالة لتخزين البلاغات ***
     projectPayments: [],
     messages: [], // *** إضافة: حالة لتخزين الرسائل ***
       hasActiveCalendarEvents: false, // *** إضافة: حالة لتتبع وجود أحداث نشطة في الجدول الزمني ***
@@ -1461,12 +1535,16 @@
     calendarEvents: [],
     hasNewPurchases: false, // *** إضافة: حالة لتتبع إشعارات المشتريات الجديدة ***
     currentUser: null, // *** إضافة: لتخزين معلومات المستخدم الحالي ***
+    hasNewReports: false, // *** إضافة: حالة لتتبع البلاغات الجديدة ***
     companyProfiles: [],
     api_configs: []
   };
 
   // *** إضافة: متغير لمنع تكرار محاولة حذف الاشتراك المنتهي ***
   let hasAttemptedExpiredSubCleanup = false;
+
+  // *** إضافة: متغير لتخزين دوال إلغاء الاشتراك في Firestore لمنع التكرار ***
+  let firestoreUnsubscribeFunctions = [];
 
   // Temporary storage for multi-step modals
   let tempAttendanceData = {};
@@ -1508,12 +1586,20 @@
       icon: 'fa-shopping-cart',
       color: 'linear-gradient(135deg,#8b5cf6,#6366f1)'
     },
+    // *** إضافة: وحدة جديدة لعرض بلاغات العمال ***
+    {
+      key: 'reportsDashboard',
+      title: 'بلاغات العمال',
+      description: 'مراجعة البلاغات الواردة من العمال',
+      icon: 'fa-flag',
+      color: 'linear-gradient(135deg,#3b82f6,#2563eb)',
+    },
     {
       key: 'more_features',
       title: 'ميزات إضافية',
       description: 'أدوات تنظيمية متقدمة',
-      icon: 'fa-layer-group',
-      hasNotification: () => state.hasActiveCalendarEvents, // *** إضافة: التحقق من وجود أحداث نشطة ***
+      icon: 'fa-layer-group', // *** تعديل: إضافة دالة التحقق من الإشعارات ***
+      hasNotification: () => state.hasActiveCalendarEvents,
       color: 'linear-gradient(135deg,#64748b,#475569)',
     }
   ];
@@ -1593,6 +1679,7 @@
       state.messages = await db.messages.toArray();
       state.expenses = await db.expenses.toArray();
       state.companyProfiles = await db.companyProfiles.toArray();
+      state.reports = await db.reports.toArray(); // *** إضافة: تحميل البلاغات ***
       state.api_configs = await db.api_configs.toArray();
       // *** إضافة: تحميل معلومات الاشتراك من قاعدة البيانات المحلية ***
       const subscriptionInfo = await db.app_settings.get('subscriptionInfo');
@@ -1762,6 +1849,7 @@
         state.calendarEvents = await db.calendarEvents.toArray();
       state.purchases = await db.purchases.toArray();
         state.expenses = await db.expenses.toArray();
+        state.reports = await db.reports.toArray(); // *** إضافة: جلب البلاغات ***
         state.companyProfiles = await db.companyProfiles.toArray();
         state.api_configs = await db.api_configs.toArray();
     } catch (error) {
@@ -1796,11 +1884,13 @@
             case 'api_settings':  content = getApiSettingsView(); break;
             case 'factory_reset': content = getFactoryResetView(); break;
             case 'themes':        content = getThemesView(); break;
+            case 'clear_cache':   content = getClearCacheView(); break; // *** إضافة: واجهة مسح الكاش ***
             case 'backup_restore': content = getBackupRestoreView(); break; // *** إضافة: واجهة النسخ الاحتياطي ***
             case 'about':         content = getAboutView(); break;
             case 'supplier-details': content = getSupplierDetailsView(params.id); break;
             case 'debt-details':  content = getDebtDetailsView(params.id); break; // *** إضافة: واجهة تفاصيل الدين ***
             case 'purchases':     content = getPurchasesView(); break; // *** إضافة: واجهة سجل المشتريات ***
+            case 'reportsDashboard': content = getReportsDashboardView(); break; // *** إضافة: واجهة بلاغات العمال ***
             case 'inventory-details': content = getInventoryItemDetailsView(params.id); break;
             default:              content = `<h3>View Not Found: ${viewName}</h3>`;
         } 
@@ -1816,12 +1906,19 @@
             localStorage.setItem('lastCalendarViewDate', new Date().toISOString().split('T')[0]);
             updateNotificationDots(); // تحديث الواجهة لإزالة النقطة فوراً
         }
+        // *** إضافة: إخفاء إشعار البلاغات عند زيارة الصفحة ***
+        if (viewName === 'reportsDashboard') {
+            state.hasNewReports = false;
+            // لا يوجد شيء لحفظه في localStorage هنا، فقط تحديث الحالة
+            updateNotificationDots();
+        }
         
         if (viewName === 'settings') {
             document.getElementById('navigateToApiSettings')?.addEventListener('click', () => renderView('api_settings'));
             document.getElementById('navigateToThemes')?.addEventListener('click', () => renderView('themes'));
             document.getElementById('navigateToFactoryReset')?.addEventListener('click', () => renderView('factory_reset'));
             document.getElementById('navigateToBackupRestore')?.addEventListener('click', () => renderView('backup_restore'));
+            document.getElementById('navigateToClearCache')?.addEventListener('click', () => renderView('clear_cache')); // *** إضافة: ربط زر مسح الكاش ***
             // *** إضافة: إظهار/إخفاء نقطة الإشعار على بطاقة النسخ الاحتياطي ***
             // *** تعديل: ربط زر إدارة PIN لفتح النافذة المنبثقة ***
             document.getElementById('managePinsBtn')?.addEventListener('click', openPinManagementModal);
@@ -1829,6 +1926,10 @@
             if (backupCardDot) {
                 backupCardDot.style.display = document.getElementById('settingsNotificationDot').style.display;
             }
+        }
+        // *** إضافة: ربط زر مسح الكاش في واجهته الخاصة ***
+        if (viewName === 'clear_cache') {
+            document.getElementById('clearCacheBtn')?.addEventListener('click', handleClearCache);
         }
         if (viewName === 'backup_restore') {
             // After rendering the backup view, fetch the last backup date
@@ -2159,7 +2260,8 @@
   function createCardHTML(m) {
     // *** إضافة: إظهار نقطة الإشعار للمشتريات ***
     const showDot = (m.key === 'purchases' && state.hasNewPurchases) || 
-                    (m.hasNotification && m.hasNotification());
+                    (m.hasNotification && m.hasNotification()) ||
+                    (m.key === 'reportsDashboard' && state.hasNewReports); // *** إضافة: إظهار إشعار للبلاغات ***
 
     // *** إضافة: التحقق من حالة الاشتراك لتقييد الوصول ***
     const isSubscribed = hasActiveSubscription();
@@ -2204,21 +2306,42 @@
 
   // *** إضافة: دالة لتحديث نقاط الإشعارات على البطاقات دون إعادة رسم كامل ***
   function updateNotificationDots() {
+      // *** إصلاح: توحيد منطق تحديث جميع نقاط الإشعارات ***
       document.querySelectorAll('.card[data-key]').forEach(cardEl => {
           const key = cardEl.dataset.key;
           const module = [...appModules, ...subModules].find(m => m.key === key);
-          const dotEl = cardEl.querySelector('.notification-dot');
-          if (module && dotEl) {
-              const showDot = (module.hasNotification && module.hasNotification()) || (key === 'purchases' && state.hasNewPurchases);
+          const dotEl = cardEl.querySelector('.notification-dot'); 
+          if (dotEl) {
+              // التحقق من جميع الحالات الممكنة لإظهار النقطة
+              const showDot = 
+                  (key === 'reportsDashboard' && state.hasNewReports) ||
+                  (key === 'purchases' && state.hasNewPurchases) ||
+                  (module && module.hasNotification && module.hasNotification());
+              
               dotEl.style.display = showDot ? 'block' : 'none';
           }
       });
   }
 
   function getHomeView() {
-    const activeWorkers = state.workers.length;
-    const totalProjects = state.projects.length;
-    const mainGridHTML = appModules.map(createCardHTML).join('');
+    // *** تعديل: فصل بطاقة "ميزات إضافية" لجعلها بعرض كامل ***
+    const regularModules = appModules.filter(m => m.key !== 'more_features');
+    const moreFeaturesModule = appModules.find(m => m.key === 'more_features');
+
+    const regularCardsHTML = regularModules.map(createCardHTML).join('');
+    const moreFeaturesCardHTML = moreFeaturesModule ? `
+      <div class="card full-width-card" data-key="${moreFeaturesModule.key}">
+        <div style="display:flex; align-items:center; gap: 12px;">
+          <div class="icon" style="background:${moreFeaturesModule.color}"><i class="fas ${moreFeaturesModule.icon}"></i></div>
+          <div>
+            <div style="font-weight:900; font-size: 16px;">${moreFeaturesModule.title}</div>
+            <div style="color:var(--muted); font-size:13px; margin-top: 4px;">${moreFeaturesModule.description}</div>
+          </div>
+        </div>
+        <i class="fas fa-chevron-left" style="color: var(--muted);"></i>
+      </div>
+    ` : '';
+
     // *** تعديل: إضافة اسم المستخدم إلى رسالة الترحيب ***
     const welcomeName = state.currentUser?.firstName ? ` ${state.currentUser.firstName}` : '';
 
@@ -2234,17 +2357,16 @@
             </button>
         </div>
         <div class="kpis">
-            <div class="kpi">
-                <div style="font-size:18px;font-weight:800">${totalProjects}</div>
-                <div style="font-size:12px;opacity:.9">إجمالي المشاريع</div>
-            </div>
-            <div class="kpi">
-                <div style="font-size:18px;font-weight:800">${activeWorkers}</div>
-                <div style="font-size:12px;opacity:.9">العمال النشطين</div>
-            </div>
+            <div class="kpi"><div style="font-size:18px;font-weight:800">${state.projects.length}</div><div style="font-size:12px;opacity:.9">إجمالي المشاريع</div></div>
+            <div class="kpi"><div style="font-size:18px;font-weight:800">${state.workers.length}</div><div style="font-size:12px;opacity:.9">العمال النشطين</div></div>
         </div>
       </section>
-      <div class="grid-cards">${mainGridHTML}</div>
+      <div class="grid-cards">
+        ${regularCardsHTML}
+      </div>
+      <div style="margin-top: 12px;">
+        ${moreFeaturesCardHTML}
+      </div>
     `;
   }
 
@@ -3096,6 +3218,41 @@
             <h3 style="margin:0; font-weight:800; text-align: right; flex-grow: 1;">تقارير سريعة (قيد الإنشاء)</h3>
         </div>`; 
   }
+
+  function getReportsDashboardView() {
+    // *** تعديل: تصفية البلاغات لعرض فقط التي "قيد المراجعة" ***
+    const pendingReports = state.reports ? state.reports.filter(r => r.status === 'pending') : [];
+
+    const reportsListHTML = pendingReports.length > 0
+        ? pendingReports.map(report => {
+            const statusStyles = {
+                pending: { text: 'قيد المراجعة', color: '#f59e0b' },
+                approved: { text: 'تمت الموافقة', color: '#10b981' },
+                rejected: { text: 'مرفوض', color: '#ef4444' }
+            };
+            const status = statusStyles[report.status] || { text: report.status, color: '#64748b' };
+            return `
+            <div class="report-card" data-id="${report.firestoreId}" style="border-right-color: ${status.color};">
+                <div class="report-header">
+                    <span class="report-worker-name">${report.workerName || 'عامل غير معروف'}</span>
+                    <span class="status-badge" style="background-color: ${status.color};">${status.text}</span>
+                </div>
+                <p class="report-note">${report.note}</p>
+                <div style="font-size: 12px; color: var(--muted); text-align: left; margin-top: 8px;">
+                    ${new Date(normalizeTimestamp(report.date)).toLocaleString('ar-DZ')}
+                </div>
+            </div>
+        `}).join('')
+        : `<p style="text-align:center; color:var(--muted); padding: 20px;">لا توجد بلاغات جديدة للمراجعة.</p>`;
+
+    return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap: 12px;">
+            <button onclick="renderView('home')" class="btn icon-btn" title="العودة للرئيسية"><i class="fas fa-arrow-right"></i></button>
+            <h3 style="margin:0; font-weight:800; text-align: right; flex-grow: 1;">مراجعة بلاغات العمال</h3>
+        </div>
+        ${reportsListHTML}
+    `;
+  }
   
   function getExpensesView() {
     const today = new Date();
@@ -3565,6 +3722,18 @@
             <i class="fas fa-chevron-left" style="color: var(--muted); align-self: center;"></i>
         </div>
 
+        <!-- *** إضافة: بطاقة مسح ذاكرة التخزين المؤقت (تم نقلها إلى هنا) *** -->
+        <div id="navigateToClearCache" class="card" style="align-items:flex-start; text-align:right; flex-direction: row; justify-content: space-between; margin-top: 12px; margin-bottom: 12px;">
+            <div style="display:flex; align-items:center; gap: 12px;">
+                <div class="icon" style="width:48px; height:48px; background: linear-gradient(135deg,#f43f5e,#be123c); font-size: 20px; margin-bottom: 0;"><i class="fas fa-broom"></i></div>
+                <div>
+                    <div style="font-weight:700;">مسح ذاكرة التخزين المؤقت</div>
+                    <div style="font-size:13px; color: var(--muted)">حل المشاكل وإعادة تحميل البيانات</div>
+                </div>
+            </div>
+            <i class="fas fa-chevron-left" style="color: var(--muted); align-self: center;"></i>
+        </div>
+
 
         <div id="navigateToFactoryReset" class="card" style="align-items:flex-start; text-align:right; flex-direction: row; justify-content: space-between; margin-top: 12px; border-top: 2px solid #ef4444;">
             <div style="display:flex; align-items:center; gap: 12px;">
@@ -3577,6 +3746,45 @@
             <i class="fas fa-chevron-left" style="color: var(--muted); align-self: center;"></i>
         </div>
     `;
+  }
+
+  // *** إضافة: دالة لإنشاء واجهة مسح الكاش ***
+  function getClearCacheView() {
+    return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap: 12px;">
+            <button onclick="renderView('settings')" class="btn icon-btn" title="العودة للإعدادات"><i class="fas fa-arrow-right"></i></button>
+            <h3 style="margin:0; font-weight:800; color: #f43f5e; text-align: right; flex-grow: 1;">مسح ذاكرة التخزين المؤقت</h3>
+        </div>
+
+        <div class="card" style="cursor:default; transform:none; padding: 20px; align-items: center; text-align: center; border-color: #f43f5e;">
+            <div style="font-size: 48px; color: #f43f5e; margin-bottom: 16px;"><i class="fas fa-exclamation-triangle"></i></div>
+            <h4 style="margin: 0 0 8px; font-size: 18px;">إجراء مهم</h4>
+            <p style="color: var(--muted); line-height: 1.7; max-width: 400px; margin-bottom: 24px;">
+                <strong>نصيحة:</strong> استخدم هذه الميزة إذا واجهت مشاكل في عرض البيانات أو سلوكاً غير متوقع في التطبيق.
+                سيؤدي مسح الكاش إلى حذف البيانات المؤقتة وإجبار التطبيق على إعادة تحميل أحدث المعلومات من السحابة عند التحديث.
+                <strong>لن يتم حذف بياناتك الأساسية.</strong>
+            </p>
+            <button id="clearCacheBtn" class="btn" style="background-color: #f43f5e; padding: 10px 24px; font-size: 16px; gap: 8px;">
+                <i class="fas fa-broom" style="margin-left: 8px;"></i> نعم، أفهم وأريد مسح الكاش
+            </button>
+        </div>
+    `;
+  }
+
+  // *** إضافة: دالة لتنفيذ مسح الكاش ***
+  function handleClearCache() {
+      openConfirmModal('هل أنت متأكد من رغبتك في مسح ذاكرة التخزين المؤقت؟', () => {
+          closeConfirmModal();
+          showToast('جاري مسح الكاش...');
+          // حذف البيانات المؤقتة من localStorage
+          localStorage.removeItem('lastBackupSyncTime');
+          localStorage.removeItem('rememberedPins');
+          localStorage.removeItem('lastCheckedPurchasesTimestamp');
+          localStorage.removeItem('lastCalendarViewDate');
+          // لا نحذف deviceId لأنه يجب أن يكون دائماً
+          
+          setTimeout(() => { location.reload(); }, 1500);
+      });
   }
 
   async function refreshDebtsView() {
@@ -5465,7 +5673,14 @@
 
       try {
           // 1. جمع كل بيانات العمال من Dexie
-          const workersData = await db.workers.toArray();
+          let workersData = await db.workers.toArray();
+
+          // *** إصلاح: التأكد من أن كل عامل لديه حقل `uid` قبل المزامنة ***
+          // هذا الحقل ضروري لتطبيق العامل ليعرف هويته.
+          workersData = workersData.map(worker => {
+              if (worker.id && !worker.uid) worker.uid = worker.id.toString();
+              return worker;
+          });
 
           // 2. تجهيز البيانات للإرسال مع طابع زمني
           const syncData = {
@@ -6281,6 +6496,12 @@
     }
   });
 
+  // *** إضافة: دالة لتنظيف جميع مستمعي Firestore ***
+  function cleanupFirestoreListeners() {
+    firestoreUnsubscribeFunctions.forEach(unsubscribe => unsubscribe());
+    firestoreUnsubscribeFunctions = [];
+  }
+
   // *** تعديل: ربط زر تسجيل الخروج بعد التأكد من وجوده ***
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {
     try {
@@ -6288,6 +6509,8 @@
       showToast('تم تسجيل الخروج بنجاح.');
       // *** إصلاح: إعادة تحميل الصفحة لتنظيف الحالة وضمان عمل تسجيل الدخول مرة أخرى ***
       window.location.reload();
+      // *** إضافة: تنظيف المستمعين عند تسجيل الخروج ***
+      cleanupFirestoreListeners();
     } catch (error) {
         console.error("Logout Error:", error);
         showCustomToast('حدث خطأ أثناء تسجيل الخروج.', 'error');
@@ -7417,7 +7640,146 @@
 
   // First-time setup
   // *** تحسين: دالة لتهيئة جميع معالجات الأحداث مرة واحدة ***
-  function initializeEventListeners() {
+  function openReportReviewModal(reportId) {
+    const report = state.reports.find(r => r.firestoreId === reportId);
+    if (!report) return;
+
+    const contentEl = document.getElementById('reportReviewContent');
+    const form = document.getElementById('reportReviewForm');
+    
+    form.reset();
+    document.getElementById('reviewReportId').value = reportId;
+
+    const statusStyles = {
+        pending: { text: 'قيد المراجعة', color: '#f59e0b' },
+        approved: { text: 'تمت الموافقة', color: '#10b981' },
+        rejected: { text: 'مرفوض', color: '#ef4444' }
+    };
+    const status = statusStyles[report.status] || { text: report.status, color: '#64748b' };
+
+    // *** إضافة: تنسيق عرض التاريخ بناءً على نوع البلاغ ***
+    let dateDisplayHTML;
+    if (report.type === 'طلب إجازة' && report.startDate && report.endDate) {
+        dateDisplayHTML = `
+            <div style="font-size:14px; color:var(--muted);">فترة الإجازة</div>
+            <div style="font-weight:700; font-size:16px; margin-top: 4px; display: flex; align-items: center; gap: 10px;">
+                <span>من: ${new Date(report.startDate).toLocaleDateString('ar-DZ', { dateStyle: 'long' })}</span>
+                <i class="fas fa-arrow-left" style="font-size: 12px;"></i>
+                <span>إلى: ${new Date(report.endDate).toLocaleDateString('ar-DZ', { dateStyle: 'long' })}</span>
+            </div>`;
+    } else {
+        dateDisplayHTML = `<div style="font-size:14px; color:var(--muted);">تاريخ البلاغ</div><div style="font-weight:700; font-size:16px; margin-top: 4px;">${new Date(normalizeTimestamp(report.date)).toLocaleString('ar-DZ')}</div>`;
+    }
+
+    contentEl.innerHTML = `
+        <div style="margin-bottom: 12px;">
+            <div style="font-size:14px; color:var(--muted);">العامل</div>
+            <div style="font-weight:700; font-size:18px; margin-top: 4px;">${report.workerName || 'غير معروف'}</div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            ${dateDisplayHTML}
+        </div>
+        <div style="margin-bottom: 12px;">
+            <div style="font-size:14px; color:var(--muted);">الحالة</div>
+            <div class="status-badge" style="background-color: ${status.color}; display: inline-block; margin-top: 4px;">${status.text}</div>
+        </div>
+        <div style="background: var(--bg); padding: 12px; border-radius: 8px; margin-top: 16px;">
+            <div style="font-size:13px; color:var(--muted);">محتوى البلاغ</div>
+            <div style="font-weight:500; font-size:15px; margin-top: 4px; white-space: pre-wrap;">${report.note}</div>
+        </div>
+    `;
+
+    openModal('reportReviewModal');
+}
+
+async function handleReportReview(status) {
+    const reportId = document.getElementById('reviewReportId').value;
+    const adminNote = document.getElementById('adminNote').value;
+    const user = auth.currentUser;
+
+    if (!reportId || !user) return;
+
+    try {
+        // الخطوة 1: إذا كانت الحالة "موافقة"، قم بتحديث سجل الحضور
+        if (status === 'approved') {
+            const reportRef = firestore.collection('reports').doc(reportId);
+            const reportDoc = await reportRef.get();
+
+            if (reportDoc.exists) {
+                const reportData = reportDoc.data();
+                // *** إصلاح: البحث عن العامل باستخدام `id` بدلاً من `uid` ***
+                // `reportData.workerId` هو `uid` العامل، والذي يجب أن يتطابق مع `id` العامل في تطبيق المدير
+                const workerIdToFind = parseInt(reportData.workerId);
+                const workerToUpdate = state.workers.find(w => w.id === workerIdToFind);
+
+                if (workerToUpdate) {
+                    if (!workerToUpdate.attendance) workerToUpdate.attendance = [];
+
+                    // دالة مساعدة لإضافة يوم غياب مع التحقق من عدم التكرار
+                    const addAbsentDay = (dateStr) => {
+                        // التأكد من أن التاريخ هو سلسلة نصية بالصيغة الصحيحة
+                        const formattedDate = new Date(dateStr).toISOString().split('T')[0];
+                        // إزالة أي سجل موجود لهذا اليوم قبل إضافة الجديد
+                        workerToUpdate.attendance = workerToUpdate.attendance.filter(a => a.date !== formattedDate);
+                        // إضافة سجل الغياب
+                        workerToUpdate.attendance.push({ id: Date.now() + Math.random(), date: formattedDate, status: 'absent' });
+                    };
+
+                    if (reportData.type === 'طلب إجازة' && reportData.startDate && reportData.endDate) {
+                        // إذا كان طلب إجازة، قم بالمرور على كل يوم في الفترة
+                        let currentDate = new Date(reportData.startDate);
+                        const endDate = new Date(reportData.endDate);
+                        // *** إصلاح: التأكد من أن الحلقة تعمل بشكل صحيح ***
+                        currentDate.setUTCHours(0, 0, 0, 0);
+                        endDate.setUTCHours(0, 0, 0, 0);
+                        while (currentDate <= endDate) {
+                            addAbsentDay(currentDate);
+                            currentDate.setDate(currentDate.getDate() + 1);
+                        }
+                    } else if (reportData.date) {
+                        // إذا كان غياباً ليوم واحد
+                        addAbsentDay(reportData.date);
+                    }
+
+                    // الخطوة 2: تحديث سجل العامل في قاعدة البيانات المحلية (Dexie)
+                    await db.workers.update(workerToUpdate.id, { attendance: workerToUpdate.attendance });
+                    showToast('تم تحديث سجل حضور العامل.');
+                } else {
+                    // *** إضافة: رسالة خطأ في حال عدم العثور على العامل ***
+                    showCustomToast(`خطأ: لم يتم العثور على العامل (ID: ${reportData.workerId}) في سجلاتك.`, 'error');
+                }
+            }
+        }
+
+        // الخطوة 3: تحديث حالة البلاغ في Firestore (كما كان سابقاً)
+        const reportRef = firestore.collection('reports').doc(reportId);
+        await reportRef.update({
+            status: status,
+            reviewedBy: user.uid,
+            reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            adminNote: adminNote
+        });
+
+        showToast(`تم ${status === 'approved' ? 'الموافقة على' : 'رفض'} البلاغ.`);
+        closeModal('reportReviewModal');
+        // *** إضافة: إعادة تحميل الواجهة لإظهار التغييرات فوراً ***
+        if (state.currentView.name === 'reportsDashboard') await renderView('reportsDashboard');
+    } catch (error) {
+        console.error("Error reviewing report:", error);
+        showCustomToast('فشل تحديث حالة البلاغ.', 'error');
+    }
+}
+
+function initializeEventListeners() {
+        // Report Review Modal Listeners
+    document.getElementById('reportReviewModal').addEventListener('click', (e) => {
+        if (e.target.dataset.action === 'close-modal' || e.target.classList.contains('modal-backdrop')) {
+            closeModal('reportReviewModal');
+        }
+    });
+    document.getElementById('approveReportBtn').addEventListener('click', () => handleReportReview('approved'));
+    document.getElementById('rejectReportBtn').addEventListener('click', () => handleReportReview('rejected'));
+
     // Search Modal Listeners
     document.getElementById('searchModal').addEventListener('click', (e) => {
         if (e.target.dataset.action === 'close-modal' || e.target.classList.contains('modal-backdrop')) {
@@ -7583,6 +7945,12 @@
             if (target.closest('#showAllFinanceBtn')) openProjectFullFinanceModal(projectId);
             if (target.closest('#showAllPaymentsBtn')) openAllPaymentsModal(projectId);
             if (target.closest('#showAllExpensesBtn')) openAllExpensesModal(projectId);
+        }
+
+        // *** إضافة: معالج لفتح نافذة مراجعة البلاغ ***
+        const reportCard = target.closest('.report-card');
+        if (reportCard) {
+            openReportReviewModal(reportCard.dataset.id);
         }
 
         // *** إصلاح: إضافة معالجات أزرار واجهة تفاصيل النفقة هنا ***
@@ -7764,6 +8132,10 @@
   // --- Auth State Observer ---
   auth.onAuthStateChanged(user => {
       // *** تعديل: تهيئة التطبيق دائماً، وتحديث الواجهة حسب حالة المستخدم ***
+      // *** إصلاح: تنظيف المستمعين القدامى قبل تهيئة التطبيق لتجنب التكرار ***
+      if (firestoreUnsubscribeFunctions.length > 0) {
+          cleanupFirestoreListeners();
+      }
       initializeApp().then(() => {
         const loggedInView = document.getElementById('loggedInView');
         const loggedOutView = document.getElementById('loggedOutView');
@@ -7799,7 +8171,7 @@
             });
 
             // *** إضافة: بدء الاستماع لتغييرات الاشتراك ***
-            setupSubscriptionListener(user.uid);
+            const subUnsubscribe = setupSubscriptionListener(user.uid);
 
             // *** تعديل: استخدام المسار الصحيح لمستند المستخدم لمراقبة التحديثات ***
             firestore.collection('users').doc(user.uid).onSnapshot(doc => {
@@ -7846,11 +8218,66 @@
                     else if (state.currentView.name === 'purchases') await renderView('purchases');
                 });
 
+            // *** إضافة: مستمع Firestore للبلاغات الجديدة (للمدير) ***
+            // *** إصلاح: تعديل المستمع ليقرأ فقط البلاغات الخاصة بالعمال المرتبطين بالمدير الحالي ***
+            firestore.collection('reports').where('managerUid', '==', user.uid).onSnapshot(async (querySnapshot) => {
+                // *** الحل الجذري: تبسيط منطق التحديث ***
+                let needsRender = false;
+                let newReportsFound = false;
+                try { 
+                    // *** إصلاح جذري: تحديث الحالة المحلية (state.reports) مباشرة ***
+                    for (const change of querySnapshot.docChanges()) {
+                        const data = change.doc.data();
+                        const report = { ...data, firestoreId: change.doc.id };
+                        
+                        if (change.type === 'added') {
+                            await db.reports.put(report);
+                            // إضافة البلاغ الجديد إلى بداية المصفوفة في الحالة
+                            state.reports.unshift(report);
+                            if (report.status === 'pending') {
+                                newReportsFound = true;
+                            }
+                            needsRender = true;
+                        } else if (change.type === 'modified') {
+                            await db.reports.put(report); // put يعمل كـ update إذا كان السجل موجوداً
+                            // تحديث البلاغ الموجود في الحالة
+                            const index = state.reports.findIndex(r => r.firestoreId === report.firestoreId);
+                            if (index > -1) {
+                                state.reports[index] = report;
+                            }
+                            needsRender = true;
+                        } else if (change.type === 'removed') {
+                            await db.reports.delete(report.firestoreId);
+                            // إزالة البلاغ من الحالة
+                            state.reports = state.reports.filter(r => r.firestoreId !== report.firestoreId);
+                            needsRender = true;
+                        }
+                    }
+                    // إعادة فرز المصفوفة لضمان الترتيب الصحيح
+                    state.reports.sort((a, b) => normalizeTimestamp(b.createdAt) - normalizeTimestamp(a.createdAt));
+
+                    if (newReportsFound) {
+                        state.hasNewReports = true;
+                        updateNotificationDots();
+                    }
+                    // إذا كانت هناك تغييرات والمدير على واجهة البلاغات، أعد رسمها
+                    if (needsRender && state.currentView.name === 'reportsDashboard') {
+                        await renderView('reportsDashboard');
+                    }
+                } catch (error) {
+                    console.error("Error processing reports snapshot:", error);
+                }
+            });
+            
+            // *** إضافة: تخزين دوال إلغاء الاشتراك لتنظيفها لاحقاً ***
+            firestoreUnsubscribeFunctions.push(subUnsubscribe);
+            // (يجب إضافة دوال إلغاء الاشتراك الأخرى هنا أيضاً إذا تم تعريفها)
+
         } else {
             // User is signed out or not logged in yet
             console.log("User is not signed in. Running in offline mode.");
             loggedInView.style.display = 'none';
-            loggedOutView.style.display = 'block';
+            loggedOutView.style.display = 'flex'; // *** إصلاح: استخدام 'flex' بدلاً من 'block' لإظهار الأزرار بشكل صحيح
             userProfileIcon.className = 'fas fa-sign-in-alt';
             // *** إضافة: مسح بيانات المستخدم عند تسجيل الخروج ***
             state.currentUser = null;
