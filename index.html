@@ -109,12 +109,12 @@
   }
   /* *** إضافة: تصميم احترافي بسيط للبطاقات في الوضع النهاري *** */
   body:not(.dark) .card {
-    border: 1px solid rgba(2, 6, 23, 0.1);
+    border: 1px solid rgba(2, 6, 23, 0.15);
     box-shadow: 0 4px 12px rgba(2,6,23,.04);
   }
   /* *** إضافة: تطبيق نفس التصميم الاحترافي للبطاقات في الوضع الليلي *** */
   body.dark .card {
-    border: 1px solid rgba(255, 255, 255, 0.1); /* إطار أبيض شفاف */
+    border: 1px solid rgba(255, 255, 255, 0.15); /* إطار أبيض شفاف */
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* ظل داكن خفيف للعمق */
   }
 
@@ -624,6 +624,21 @@
   .search-result-item:hover {
     background-color: var(--bg);
   }
+  /* *** إضافة: تنسيقات بطاقة التاريخ والإجراءات السريعة (للوضع الفاتح والداكن) *** */
+  .date-action-card {
+    color: white;
+    backdrop-filter: blur(10px);
+    /* الوضع الفاتح: أزرق شفاف */
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(139, 92, 246, 0.8));
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  body.dark .date-action-card {
+    /* الوضع الداكن: رمادي-أردوازي شفاف */
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.7), rgba(71, 85, 105, 0.6));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+
   /* *** إضافة: تنسيق خاص للبطاقة التي تأخذ عرض كامل *** */
   .full-width-card {
     grid-column: 1 / -1; /* اجعل البطاقة تمتد على جميع الأعمدة */
@@ -826,6 +841,34 @@
           </div>
       </div>
   </div>
+
+  <!-- *** إضافة: نافذة منبثقة لمساعد الذكاء الاصطناعي العام *** -->
+  <div id="aiAssistantModal" class="modal-container modal-hidden">
+      <div class="modal-backdrop" data-action="close-modal"></div>
+      <div class="modal-content" style="max-width: 500px; height: 80vh;">
+          <div class="modal-header">
+              <h3>مساعد الذكاء الاصطناعي</h3>
+              <button class="close-btn" data-action="close-modal">&times;</button>
+          </div>
+          <div class="modal-body" style="padding: 0;">
+              <div class="ai-chat-container" style="height: 100%;">
+                  <div id="aiChatHistory" class="ai-chat-history">
+                      <!-- سيتم حقن سجل المحادثة هنا -->
+                  </div>
+                  <div class="ai-chat-input-area">
+                      <textarea id="aiPromptInput" placeholder="اكتب سؤالك هنا..." rows="1"></textarea>
+                      <button id="sendAiPromptBtn" class="btn" disabled><i class="fas fa-paper-plane"></i></button>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+
+
+
+
+
+
 
 
 
@@ -1536,7 +1579,8 @@
     hasNewPurchases: false, // *** إضافة: حالة لتتبع إشعارات المشتريات الجديدة ***
     currentUser: null, // *** إضافة: لتخزين معلومات المستخدم الحالي ***
     hasNewReports: false, // *** إضافة: حالة لتتبع البلاغات الجديدة ***
-    companyProfiles: [],
+    companyProfiles: [], 
+    aiChatHistory: [], // *** إضافة: تهيئة سجل محادثة الذكاء الاصطناعي ***
     api_configs: []
   };
 
@@ -2361,6 +2405,24 @@
             <div class="kpi"><div style="font-size:18px;font-weight:800">${state.workers.length}</div><div style="font-size:12px;opacity:.9">العمال النشطين</div></div>
         </div>
       </section>
+      <!-- *** إضافة: بطاقة التاريخ والإجراءات السريعة *** -->
+      <div class="card date-action-card" style="flex-direction: row; justify-content: space-between; align-items: center; text-align: right; margin-top: 16px; margin-bottom: 16px; padding: 16px; cursor: default; transform: none;">
+        <div style="display:flex; align-items:center; gap: 12px;">
+            <div class="icon" style="width:48px; height:48px; background: rgba(255,255,255,0.1); font-size: 20px; margin-bottom: 0;"><i class="fas fa-calendar-day"></i></div>
+            <div>
+                <div style="font-weight: 800; font-size: 16px;">${new Date().toLocaleDateString('ar-DZ', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+                <div style="font-size: 13px; opacity: 0.8;">تاريخ اليوم</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button onclick="openAiAssistantModal()" class="btn icon-btn" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);" title="مساعد الذكاء الاصطناعي">
+                <i class="fas fa-robot"></i>
+            </button>
+            <button onclick="renderView(state.currentView.name, state.currentView.params)" class="btn icon-btn" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);" title="تحديث البيانات (Actualiser)">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+      </div>
       <div class="grid-cards">
         ${regularCardsHTML}
       </div>
@@ -3239,7 +3301,7 @@
                 </div>
                 <p class="report-note">${report.note}</p>
                 <div style="font-size: 12px; color: var(--muted); text-align: left; margin-top: 8px;">
-                    ${new Date(normalizeTimestamp(report.date)).toLocaleString('ar-DZ')}
+                    ${new Date(normalizeTimestamp(report.date)).toLocaleDateString('ar-DZ')}
                 </div>
             </div>
         `}).join('')
@@ -3970,7 +4032,8 @@
                 <div>
                     <div style="font-weight: 700;">${purchase.description}</div>
                     <div style="font-size: 13px; color: var(--muted); margin-top: 4px;">
-                        <i class="fas fa-user" style="margin-left: 4px;"></i> ${purchase.workerName || 'عامل غير معروف'}
+                        <i class="fas fa-user" style="margin-left: 4px;"></i> ${purchase.workerName || 'عامل غير معروف'} &bull;
+                        <span style="font-weight: 500;">${new Date(purchase.date).toLocaleDateString('ar-DZ')}</span>
                     </div>
                 </div>
                 <div style="font-weight: 800; font-size: 18px; color: #ef4444; flex-shrink: 0;">${purchase.amount.toLocaleString()} د.ج</div>
@@ -7216,6 +7279,43 @@
       return systemPrompt;
   }
 
+  // *** إضافة: دالة لفتح نافذة مساعد الذكاء الاصطناعي ***
+  function openAiAssistantModal() {
+      if (!state.active_api_id) {
+          showCustomToast('مساعد الذكاء الاصطناعي غير نشط. يرجى تفعيل مفتاح API من الإعدادات.', 'error');
+          renderView('api_settings');
+          return;
+      }
+
+      openModal('aiAssistantModal');
+      const history = document.getElementById('aiChatHistory');
+      const input = document.getElementById('aiPromptInput');
+      const sendBtn = document.getElementById('sendAiPromptBtn');
+
+      // إعادة تعيين المحتوى عند الفتح
+      const welcomeMessage = "مرحباً! أنا مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟";
+      history.innerHTML = `<div class="ai-chat-bubble model"><p>${welcomeMessage}</p></div>`;
+      input.value = '';
+      sendBtn.disabled = true;
+
+      // إزالة أي مستمعين قدامى لتجنب التكرار
+      const newSendBtn = sendBtn.cloneNode(true);
+      sendBtn.parentNode.replaceChild(newSendBtn, sendBtn);
+      const newInput = input.cloneNode(true);
+      input.parentNode.replaceChild(newInput, input);
+
+      // إضافة مستمعين جدد
+      newInput.addEventListener('input', () => { newSendBtn.disabled = newInput.value.trim() === ''; });
+      newSendBtn.addEventListener('click', handleSendAiPrompt);
+      newInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              if (!newSendBtn.disabled) handleSendAiPrompt();
+          }
+      });
+      newInput.focus();
+  }
+
   async function handleAnalysisRequest(type, id) {
       const modal = document.getElementById('aiAnalysisModal');
       const modalBody = document.getElementById('aiAnalysisModalBody');
@@ -7357,6 +7457,7 @@
       const input = document.getElementById('aiPromptInput');
       const history = document.getElementById('aiChatHistory');
       const sendBtn = document.getElementById('sendAiPromptBtn');
+
       const prompt = input.value.trim();
       if (!prompt) return;
 
@@ -7438,17 +7539,23 @@
           const response = await fetch(url, options);
 
           if (!response.ok) {
-              // Try to parse the error response from the API for a more detailed message
               let errorDetails = `Status: ${response.status} ${response.statusText}`;
+              let isCreditError = false;
               try {
                   const errorData = await response.json();
                   if (errorData.error && errorData.error.message) {
                       errorDetails = errorData.error.message;
+                      // *** إضافة: التحقق من خطأ الرصيد ***
+                      if (errorDetails.includes('Insufficient credits')) {
+                          isCreditError = true;
+                      }
                   }
               } catch (e) {
                   // Could not parse JSON, stick with the status text
               }
-              throw new Error(`فشل طلب الـ API:\n${errorDetails}`);
+              // *** تعديل: إرسال رسالة خطأ مخصصة لمشكلة الرصيد ***
+              const errorMessage = isCreditError ? 'رصيدك غير كافٍ في OpenRouter. يرجى شحن حسابك.' : `فشل طلب الـ API:\n${errorDetails}`;
+              throw new Error(errorMessage);
           }
 
           const data = await response.json();
@@ -7668,7 +7775,7 @@
                 <span>إلى: ${new Date(report.endDate).toLocaleDateString('ar-DZ', { dateStyle: 'long' })}</span>
             </div>`;
     } else {
-        dateDisplayHTML = `<div style="font-size:14px; color:var(--muted);">تاريخ البلاغ</div><div style="font-weight:700; font-size:16px; margin-top: 4px;">${new Date(normalizeTimestamp(report.date)).toLocaleString('ar-DZ')}</div>`;
+        dateDisplayHTML = `<div style="font-size:14px; color:var(--muted);">تاريخ البلاغ</div><div style="font-weight:700; font-size:16px; margin-top: 4px;">${new Date(normalizeTimestamp(report.date)).toLocaleDateString('ar-DZ', { dateStyle: 'long' })}</div>`;
     }
 
     contentEl.innerHTML = `
@@ -7836,6 +7943,13 @@ function initializeEventListeners() {
     document.getElementById('debtModal')?.addEventListener('click', (e) => {
         if (e.target.dataset.action === 'close-modal' || e.target.classList.contains('modal-backdrop')) {
             closeDebtModal();
+          }
+      });
+
+      // *** إضافة: معالج حدث لإغلاق نافذة مساعد الذكاء الاصطناعي ***
+      document.getElementById('aiAssistantModal')?.addEventListener('click', (e) => {
+          if (e.target.dataset.action === 'close-modal' || e.target.classList.contains('modal-backdrop')) {
+              closeModal('aiAssistantModal');
         }
     });
     // *** إصلاح: إضافة معالج حدث لزر حذف الدين ***
